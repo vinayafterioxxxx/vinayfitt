@@ -10,6 +10,7 @@ import {
   Inter_700Bold
 } from '@expo-google-fonts/inter';
 import { SplashScreen } from 'expo-router';
+import { UserProvider } from '@/contexts/UserContext';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -34,12 +35,13 @@ export default function RootLayout() {
   }
 
   return (
-    <>
+    <UserProvider>
       <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="dark" />
-    </>
+    </UserProvider>
   );
 }
