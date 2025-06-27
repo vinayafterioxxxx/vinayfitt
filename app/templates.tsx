@@ -9,17 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { 
-  ArrowLeft, 
-  Plus, 
-  Search,
-  Filter,
-  Clock,
-  Dumbbell,
-  Edit,
-  Trash2,
-  Copy
-} from 'lucide-react-native';
+import { ArrowLeft, Plus, Search, Filter, Clock, Dumbbell, CreditCard as Edit, Trash2, Copy } from 'lucide-react-native';
 import { useColorScheme, getColors } from '@/hooks/useColorScheme';
 import { router } from 'expo-router';
 import { WorkoutTemplate } from '@/types/workout';
