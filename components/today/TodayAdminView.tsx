@@ -7,16 +7,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { 
-  Shield, 
-  Users, 
-  TrendingUp,
-  AlertTriangle,
-  Settings,
-  BarChart3,
-  Database,
-  Activity
-} from 'lucide-react-native';
+import { Shield, Users, TrendingUp, TriangleAlert as AlertTriangle, Settings, ChartBar as BarChart3, Database, Activity } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme, getColors } from '../../hooks/useColorScheme';
 
