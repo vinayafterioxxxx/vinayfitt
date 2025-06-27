@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 
 // Import role-specific views
 import CoachingClientView from '@/components/coaching/CoachingClientView';
+import CoachingTrainerView from '@/components/coaching/CoachingTrainerView';
 
 export default function CoachingScreen() {
   const { userRole } = useUserRole();
@@ -27,12 +28,12 @@ export default function CoachingScreen() {
     );
   }
 
-  // For now, all roles see the client view - you can create role-specific views later
+  // Render appropriate view based on user role
   switch (userRole) {
     case 'client':
       return <CoachingClientView />;
     case 'trainer':
-      return <CoachingClientView />; // TODO: Create TrainerCoachingView
+      return <CoachingTrainerView />;
     case 'nutritionist':
       return <CoachingClientView />; // TODO: Create NutritionistCoachingView
     case 'admin':

@@ -1,11 +1,146 @@
 import { Tabs } from 'expo-router';
 import { StyleSheet } from 'react-native';
-import { Chrome as Home, Dumbbell, MessageSquare, Play, User } from 'lucide-react-native';
+import { Chrome as Home, Dumbbell, MessageSquare, Play, User, Users, Apple, Shield, Briefcase } from 'lucide-react-native';
 import { useColorScheme, getColors } from '@/hooks/useColorScheme';
+import { useUserRole } from '@/contexts/UserContext';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const colors = getColors(colorScheme);
+  const { userRole } = useUserRole();
+
+  // Define role-specific tab configurations
+  const getTabsForRole = () => {
+    const baseTabs = [
+      {
+        name: 'index',
+        title: 'Today',
+        icon: Home,
+      },
+    ];
+
+    const roleTabs = {
+      client: [
+        ...baseTabs,
+        {
+          name: 'coaching',
+          title: 'Coaching',
+          icon: Dumbbell,
+        },
+        {
+          name: 'on-demand',
+          title: 'On-demand',
+          icon: Play,
+        },
+        {
+          name: 'inbox',
+          title: 'Inbox',
+          icon: MessageSquare,
+        },
+        {
+          name: 'profile',
+          title: 'You',
+          icon: User,
+        },
+      ],
+      trainer: [
+        ...baseTabs,
+        {
+          name: 'coaching',
+          title: 'Clients',
+          icon: Users,
+        },
+        {
+          name: 'on-demand',
+          title: 'Programs',
+          icon: Play,
+        },
+        {
+          name: 'inbox',
+          title: 'Messages',
+          icon: MessageSquare,
+        },
+        {
+          name: 'profile',
+          title: 'Profile',
+          icon: User,
+        },
+      ],
+      nutritionist: [
+        ...baseTabs,
+        {
+          name: 'coaching',
+          title: 'Clients',
+          icon: Users,
+        },
+        {
+          name: 'on-demand',
+          title: 'Meal Plans',
+          icon: Apple,
+        },
+        {
+          name: 'inbox',
+          title: 'Messages',
+          icon: MessageSquare,
+        },
+        {
+          name: 'profile',
+          title: 'Profile',
+          icon: User,
+        },
+      ],
+      admin: [
+        ...baseTabs,
+        {
+          name: 'coaching',
+          title: 'Management',
+          icon: Shield,
+        },
+        {
+          name: 'on-demand',
+          title: 'System',
+          icon: Play,
+        },
+        {
+          name: 'inbox',
+          title: 'Alerts',
+          icon: MessageSquare,
+        },
+        {
+          name: 'profile',
+          title: 'Admin',
+          icon: User,
+        },
+      ],
+      hr: [
+        ...baseTabs,
+        {
+          name: 'coaching',
+          title: 'Staff',
+          icon: Briefcase,
+        },
+        {
+          name: 'on-demand',
+          title: 'Resources',
+          icon: Play,
+        },
+        {
+          name: 'inbox',
+          title: 'Messages',
+          icon: MessageSquare,
+        },
+        {
+          name: 'profile',
+          title: 'Profile',
+          icon: User,
+        },
+      ],
+    };
+
+    return roleTabs[userRole || 'client'] || roleTabs.client;
+  };
+
+  const tabs = getTabsForRole();
 
   return (
     <Tabs
@@ -19,51 +154,21 @@ export default function TabLayout() {
         tabBarInactiveTintColor: colors.textTertiary,
         tabBarLabelStyle: styles.tabBarLabel,
       }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Today',
-          tabBarIcon: ({ size, color }) => (
-            <Home size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="coaching"
-        options={{
-          title: 'Coaching',
-          tabBarIcon: ({ size, color }) => (
-            <Dumbbell size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="inbox"
-        options={{
-          title: 'Inbox',
-          tabBarIcon: ({ size, color }) => (
-            <MessageSquare size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="on-demand"
-        options={{
-          title: 'On-demand',
-          tabBarIcon: ({ size, color }) => (
-            <Play size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'You',
-          tabBarIcon: ({ size, color }) => (
-            <User size={size} color={color} />
-          ),
-        }}
-      />
+      {tabs.map((tab) => {
+        const IconComponent = tab.icon;
+        return (
+          <Tabs.Screen
+            key={tab.name}
+            name={tab.name}
+            options={{
+              title: tab.title,
+              tabBarIcon: ({ size, color }) => (
+                <IconComponent size={size} color={color} />
+              ),
+            }}
+          />
+        );
+      })}
     </Tabs>
   );
 }
