@@ -89,6 +89,13 @@ export const getClientPlans = async (clientId: string): Promise<WorkoutPlan[]> =
   return plans.filter(p => p.clientId === clientId);
 };
 
+export const deletePlan = async (id: string): Promise<void> => {
+  const plans = await getPlans();
+  const updatedPlans = plans.filter(p => p.id !== id);
+  await storeData(STORAGE_KEYS.PLANS, updatedPlans);
+  await addToPendingSync('plan', id, 'delete');
+};
+
 // Session functions
 export const saveSession = async (session: WorkoutSession): Promise<void> => {
   const sessions = await getSessions();
@@ -110,6 +117,13 @@ export const getSession = async (id: string): Promise<WorkoutSession | null> => 
 export const getClientSessions = async (clientId: string): Promise<WorkoutSession[]> => {
   const sessions = await getSessions();
   return sessions.filter(s => s.clientId === clientId);
+};
+
+export const deleteSession = async (id: string): Promise<void> => {
+  const sessions = await getSessions();
+  const updatedSessions = sessions.filter(s => s.id !== id);
+  await storeData(STORAGE_KEYS.SESSIONS, updatedSessions);
+  await addToPendingSync('session', id, 'delete');
 };
 
 // Client functions
@@ -214,6 +228,30 @@ export const initializeDefaultData = async (): Promise<void> => {
         muscleGroups: ['Back', 'Biceps'],
         instructions: 'Hang from bar, pull body up until chin over bar',
         equipment: 'Pull-up bar'
+      },
+      {
+        id: '6',
+        name: 'Overhead Press',
+        category: 'Strength',
+        muscleGroups: ['Shoulders', 'Triceps', 'Core'],
+        instructions: 'Press weight overhead from shoulder level',
+        equipment: 'Barbell or Dumbbells'
+      },
+      {
+        id: '7',
+        name: 'Barbell Rows',
+        category: 'Strength',
+        muscleGroups: ['Back', 'Biceps'],
+        instructions: 'Pull barbell to lower chest while bent over',
+        equipment: 'Barbell'
+      },
+      {
+        id: '8',
+        name: 'Lunges',
+        category: 'Bodyweight',
+        muscleGroups: ['Quadriceps', 'Glutes', 'Hamstrings'],
+        instructions: 'Step forward and lower back knee toward ground',
+        equipment: 'None'
       }
     ];
     await saveExercises(defaultExercises);
@@ -249,5 +287,74 @@ export const initializeDefaultData = async (): Promise<void> => {
       }
     ];
     await storeData(STORAGE_KEYS.CLIENTS, defaultClients);
+  }
+
+  // Initialize sample workout templates
+  const templates = await getTemplates();
+  if (templates.length === 0) {
+    const defaultTemplates: WorkoutTemplate[] = [
+      {
+        id: 'template-1',
+        name: 'Full Body Strength',
+        description: 'A comprehensive full-body strength training workout',
+        category: 'Strength',
+        duration: 45,
+        exercises: [
+          {
+            id: 'ex-1',
+            exerciseId: '3',
+            exercise: {
+              id: '3',
+              name: 'Bench Press',
+              category: 'Strength',
+              muscleGroups: ['Chest', 'Shoulders', 'Triceps'],
+            },
+            sets: [
+              { reps: 8, weight: 60, restTime: 90 },
+              { reps: 8, weight: 65, restTime: 90 },
+              { reps: 6, weight: 70, restTime: 120 }
+            ],
+            order: 0
+          },
+          {
+            id: 'ex-2',
+            exerciseId: '4',
+            exercise: {
+              id: '4',
+              name: 'Deadlift',
+              category: 'Strength',
+              muscleGroups: ['Hamstrings', 'Glutes', 'Back'],
+            },
+            sets: [
+              { reps: 5, weight: 80, restTime: 120 },
+              { reps: 5, weight: 85, restTime: 120 },
+              { reps: 3, weight: 90, restTime: 180 }
+            ],
+            order: 1
+          },
+          {
+            id: 'ex-3',
+            exerciseId: '2',
+            exercise: {
+              id: '2',
+              name: 'Squats',
+              category: 'Bodyweight',
+              muscleGroups: ['Quadriceps', 'Glutes', 'Hamstrings'],
+            },
+            sets: [
+              { reps: 12, weight: 0, restTime: 60 },
+              { reps: 12, weight: 0, restTime: 60 },
+              { reps: 15, weight: 0, restTime: 60 }
+            ],
+            order: 2
+          }
+        ],
+        createdBy: 'trainer-1',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isPublic: false
+      }
+    ];
+    await storeData(STORAGE_KEYS.TEMPLATES, defaultTemplates);
   }
 };
