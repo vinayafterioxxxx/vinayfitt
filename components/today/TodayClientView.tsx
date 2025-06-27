@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,11 +15,16 @@ import {
   UtensilsCrossed,
   TrendingUp,
   Calendar,
-  X
+  X,
+  Play,
+  Dumbbell
 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme, getColors } from '../../hooks/useColorScheme';
 import { router } from 'expo-router';
+import { WorkoutPlan, WorkoutTemplate } from '@/types/workout';
+import { getClientPlans, getTemplate } from '@/utils/storage';
+import { getDayOfWeek, isToday } from '@/utils/workoutUtils';
 
 const { width } = Dimensions.get('window');
 
@@ -32,6 +37,39 @@ export default function TodayClientView() {
   const [steps, setSteps] = useState(2847);
   const [stepGoal] = useState(10000);
   const [userName] = useState('Vinay');
+  const [todaysWorkout, setTodaysWorkout] = useState<WorkoutTemplate | null>(null);
+  const [currentPlan, setCurrentPlan] = useState<WorkoutPlan | null>(null);
+
+  useEffect(() => {
+    loadTodaysWorkout();
+  }, []);
+
+  const loadTodaysWorkout = async () => {
+    try {
+      // Get current client's plans
+      const clientId = 'client-1'; // TODO: Get from user context
+      const plans = await getClientPlans(clientId);
+      
+      // Find active plan for today
+      const today = new Date().toISOString().split('T')[0];
+      const activePlan = plans.find(plan => 
+        plan.startDate <= today && plan.endDate >= today
+      );
+
+      if (activePlan) {
+        setCurrentPlan(activePlan);
+        const dayOfWeek = getDayOfWeek(new Date());
+        const templateId = activePlan.schedule[dayOfWeek];
+        
+        if (templateId) {
+          const template = await getTemplate(templateId);
+          setTodaysWorkout(template);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading today\'s workout:', error);
+    }
+  };
 
   const getCurrentDate = () => {
     const date = new Date();
@@ -55,18 +93,15 @@ export default function TodayClientView() {
     router.push('/activities');
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.dateText}>{getCurrentDate()}</Text>
-          <Text style={styles.greetingText}>
-            {getGreeting()}, {userName}! 👋
-          </Text>
-        </View>
+  const handleStartWorkout = () => {
+    if (todaysWorkout) {
+      router.push(`/start-workout/${todaysWorkout.id}`);
+    }
+  };
 
-        {/* Rest Day Card */}
+  const renderTodaysWorkout = () => {
+    if (!todaysWorkout) {
+      return (
         <LinearGradient
           colors={colorScheme === 'dark' ? ['#1E40AF', '#3730A3'] : ['#667EEA', '#764BA2']}
           style={styles.restDayCard}
@@ -80,6 +115,45 @@ export default function TodayClientView() {
             </Text>
           </View>
         </LinearGradient>
+      );
+    }
+
+    return (
+      <LinearGradient
+        colors={colorScheme === 'dark' ? ['#BE185D', '#BE123C'] : ['#F093FB', '#F5576C']}
+        style={styles.workoutCard}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={styles.workoutContent}>
+          <View style={styles.workoutInfo}>
+            <Text style={styles.workoutLabel}>TODAY'S WORKOUT</Text>
+            <Text style={styles.workoutName}>{todaysWorkout.name}</Text>
+            <Text style={styles.workoutDetails}>
+              {todaysWorkout.exercises.length} exercises • {todaysWorkout.duration} min
+            </Text>
+          </View>
+          <TouchableOpacity style={styles.playButton} onPress={handleStartWorkout}>
+            <Play size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.dateText}>{getCurrentDate()}</Text>
+          <Text style={styles.greetingText}>
+            {getGreeting()}, {userName}! 👋
+          </Text>
+        </View>
+
+        {/* Today's Workout */}
+        {renderTodaysWorkout()}
 
         {/* Missed Workout Alert */}
         {showMissedWorkout && (
@@ -125,6 +199,30 @@ export default function TodayClientView() {
               </View>
               <Text style={styles.progressText}>{Math.round(stepProgress)}%</Text>
             </View>
+          </View>
+        </View>
+
+        {/* Quick Actions */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Quick Actions</Text>
+            <Dumbbell size={24} color={colors.success} />
+          </View>
+          
+          <View style={styles.actionGrid}>
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={() => router.push('/templates')}
+            >
+              <Text style={styles.actionButtonText}>View Templates</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={() => router.push('/workout-history')}
+            >
+              <Text style={styles.actionButtonText}>Workout History</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -242,6 +340,46 @@ const createStyles = (colors: any) => StyleSheet.create({
     color: '#FFFFFF',
     lineHeight: 24,
   },
+  workoutCard: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+    borderRadius: 16,
+    padding: 24,
+  },
+  workoutContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  workoutInfo: {
+    flex: 1,
+  },
+  workoutLabel: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+    letterSpacing: 1,
+    marginBottom: 8,
+  },
+  workoutName: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 20,
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  workoutDetails: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  playButton: {
+    width: 56,
+    height: 56,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   alertCard: {
     backgroundColor: colors.surface,
     marginHorizontal: 20,
@@ -350,7 +488,12 @@ const createStyles = (colors: any) => StyleSheet.create({
     color: colors.primary,
     minWidth: 35,
   },
+  actionGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
   actionButton: {
+    flex: 1,
     backgroundColor: colors.surfaceSecondary,
     borderWidth: 1,
     borderColor: colors.border,

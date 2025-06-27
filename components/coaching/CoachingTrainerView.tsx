@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,10 +18,13 @@ import {
   Star,
   Activity,
   Search,
-  Filter
+  Filter,
+  Dumbbell,
+  FileText
 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme, getColors } from '../../hooks/useColorScheme';
+import { router } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
@@ -119,6 +122,33 @@ export default function CoachingTrainerView() {
                 <Text style={styles.statNumber}>92%</Text>
                 <Text style={styles.statLabel}>Avg Progress</Text>
               </View>
+            </View>
+
+            {/* Quick Actions */}
+            <View style={styles.quickActions}>
+              <TouchableOpacity 
+                style={styles.quickActionButton}
+                onPress={() => router.push('/templates')}
+              >
+                <Dumbbell size={20} color={colors.primary} />
+                <Text style={styles.quickActionText}>Templates</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.quickActionButton}
+                onPress={() => router.push('/workout-plans')}
+              >
+                <Calendar size={20} color={colors.success} />
+                <Text style={styles.quickActionText}>Plans</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.quickActionButton}
+                onPress={() => router.push('/client-analytics')}
+              >
+                <TrendingUp size={20} color={colors.warning} />
+                <Text style={styles.quickActionText}>Analytics</Text>
+              </TouchableOpacity>
             </View>
 
             {/* Client List */}
@@ -309,6 +339,30 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontSize: 12,
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+  quickActions: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    marginBottom: 24,
+    gap: 12,
+  },
+  quickActionButton: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  quickActionText: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 12,
+    color: colors.text,
+    marginTop: 8,
   },
   sectionTitle: {
     fontFamily: 'Inter-SemiBold',

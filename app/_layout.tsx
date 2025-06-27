@@ -11,6 +11,7 @@ import {
 } from '@expo-google-fonts/inter';
 import { SplashScreen } from 'expo-router';
 import { UserProvider } from '@/contexts/UserContext';
+import { initializeDefaultData } from '@/utils/storage';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -27,6 +28,8 @@ export default function RootLayout() {
   useEffect(() => {
     if (fontsLoaded || fontError) {
       SplashScreen.hideAsync();
+      // Initialize default data when app starts
+      initializeDefaultData();
     }
   }, [fontsLoaded, fontError]);
 
@@ -39,6 +42,10 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="templates" />
+        <Stack.Screen name="create-template" />
+        <Stack.Screen name="workout-plans" />
+        <Stack.Screen name="create-plan" />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="dark" />
