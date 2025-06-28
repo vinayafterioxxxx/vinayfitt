@@ -102,11 +102,11 @@ export default function MetricTrackingScreen() {
     const range = maxValue - minValue || 1;
 
     const chartWidth = width - 80;
-    const chartHeight = 160;
+    const chartHeight = 200;
 
     const points: ChartPoint[] = sortedEntries.map((entry, index) => {
       const x = (index / Math.max(sortedEntries.length - 1, 1)) * chartWidth;
-      const y = chartHeight - ((entry.value - minValue) / range) * chartHeight;
+      const y = chartHeight - ((entry.value - minValue) / range) * (chartHeight - 40) - 20;
       
       return {
         x,
@@ -178,7 +178,7 @@ export default function MetricTrackingScreen() {
     }
 
     const chartWidth = width - 80;
-    const chartHeight = 160;
+    const chartHeight = 200;
 
     return (
       <View style={styles.chartContainer}>
@@ -225,11 +225,11 @@ export default function MetricTrackingScreen() {
               style={[
                 styles.chartPoint,
                 {
-                  left: point.x - 4,
-                  top: point.y - 4,
+                  left: point.x - 6,
+                  top: point.y - 6,
                 }
               ]}
-              onPress={() => setHoveredPoint(point)}
+              onPress={() => setHoveredPoint(hoveredPoint?.date === point.date ? null : point)}
             />
           ))}
           
@@ -239,8 +239,8 @@ export default function MetricTrackingScreen() {
               style={[
                 styles.tooltip,
                 {
-                  left: Math.min(hoveredPoint.x - 40, chartWidth - 100),
-                  top: Math.max(hoveredPoint.y - 60, 10),
+                  left: Math.min(Math.max(hoveredPoint.x - 40, 0), chartWidth - 80),
+                  top: Math.max(hoveredPoint.y - 70, 10),
                 }
               ]}
             >
@@ -257,7 +257,7 @@ export default function MetricTrackingScreen() {
         {/* X-axis labels */}
         <View style={styles.chartLabels}>
           {chartData.map((point, index) => {
-            if (index % Math.ceil(chartData.length / 6) !== 0) return null;
+            if (index % Math.ceil(chartData.length / 5) !== 0) return null;
             return (
               <Text key={index} style={[styles.chartLabel, { left: point.x - 15 }]}>
                 {new Date(point.date).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}
@@ -560,7 +560,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     top: 0,
     bottom: 0,
     justifyContent: 'space-between',
-    paddingVertical: 10,
+    paddingVertical: 20,
   },
   yAxisLabel: {
     fontFamily: 'Inter-Regular',
@@ -577,15 +577,15 @@ const createStyles = (colors: any) => StyleSheet.create({
   chartSegment: {
     position: 'absolute',
     height: 2,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.text,
   },
   chartPoint: {
     position: 'absolute',
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.primary,
-    borderWidth: 2,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: colors.text,
+    borderWidth: 3,
     borderColor: colors.background,
   },
   tooltip: {
@@ -595,6 +595,11 @@ const createStyles = (colors: any) => StyleSheet.create({
     padding: 8,
     minWidth: 80,
     alignItems: 'center',
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
+    elevation: 4,
   },
   tooltipDate: {
     fontFamily: 'Inter-Medium',
@@ -620,7 +625,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     textAlign: 'center',
   },
   emptyChart: {
-    height: 160,
+    height: 200,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.surface,
