@@ -16,7 +16,8 @@ import {
   Play,
   Calendar,
   TrendingUp,
-  ChevronRight
+  ChevronRight,
+  RotateCcw
 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme, getColors } from '../../hooks/useColorScheme';
@@ -120,6 +121,10 @@ export default function CoachingClientView() {
     }
   };
 
+  const handleTrainingPress = () => {
+    router.push('/training-schedule');
+  };
+
   const getWorkoutCount = () => {
     return weeklyWorkouts.filter(w => w.template !== null).length;
   };
@@ -127,7 +132,10 @@ export default function CoachingClientView() {
   const renderWeeklyCalendar = () => (
     <View style={styles.calendarSection}>
       <View style={styles.calendarHeader}>
-        <Text style={styles.calendarTitle}>Training (this week)</Text>
+        <TouchableOpacity onPress={handleTrainingPress} style={styles.trainingHeader}>
+          <Text style={styles.calendarTitle}>Training (this week)</Text>
+          <ChevronRight size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
       </View>
       
       <View style={styles.weekContainer}>
@@ -184,7 +192,7 @@ export default function CoachingClientView() {
           <Text style={styles.macrosDescription}>
             Start by setting your daily goal
           </Text>
-          <TouchableOpacity style={styles.macrosButton}>
+          <TouchableOpacity style={styles.macrosButton} onPress={() => router.push('/set-macros-goal')}>
             <Text style={styles.macrosButtonText}>Set daily goal</Text>
           </TouchableOpacity>
         </View>
@@ -340,300 +348,4 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: colors.surfaceSecondary,
-    borderRadius: 8,
-    padding: 4,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderRadius: 6,
-  },
-  activeTab: {
-    backgroundColor: colors.surface,
-  },
-  tabText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-  activeTabText: {
-    color: colors.text,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  calendarSection: {
-    paddingHorizontal: 20,
-    marginBottom: 24,
-  },
-  calendarHeader: {
-    marginBottom: 16,
-  },
-  calendarTitle: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 18,
-    color: colors.text,
-  },
-  weekContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  dayButton: {
-    width: 40,
-    height: 60,
-    borderRadius: 20,
-    backgroundColor: colors.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  activeDayButton: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  completedDayButton: {
-    backgroundColor: colors.success,
-    borderColor: colors.success,
-  },
-  missedDayButton: {
-    backgroundColor: colors.error,
-    borderColor: colors.error,
-  },
-  dayName: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginBottom: 4,
-  },
-  activeDayName: {
-    color: '#FFFFFF',
-  },
-  completedDayName: {
-    color: '#FFFFFF',
-  },
-  missedDayName: {
-    color: '#FFFFFF',
-  },
-  dayNumber: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 16,
-    color: colors.text,
-  },
-  activeDayNumber: {
-    color: '#FFFFFF',
-  },
-  completedDayNumber: {
-    color: '#FFFFFF',
-  },
-  missedDayNumber: {
-    color: '#FFFFFF',
-  },
-  weekSummary: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  taskSection: {
-    paddingHorizontal: 20,
-    marginBottom: 24,
-  },
-  taskTitle: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 18,
-    color: colors.text,
-    marginBottom: 12,
-  },
-  taskMessage: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-  macrosSection: {
-    paddingHorizontal: 20,
-    marginBottom: 24,
-  },
-  macrosTitle: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 18,
-    color: colors.text,
-    marginBottom: 16,
-  },
-  macrosContent: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  macrosText: {
-    flex: 1,
-  },
-  macrosDescription: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginBottom: 12,
-    lineHeight: 20,
-  },
-  macrosButton: {
-    backgroundColor: colors.surfaceSecondary,
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    alignSelf: 'flex-start',
-  },
-  macrosButtonText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 12,
-    color: colors.primary,
-  },
-  macrosEmoji: {
-    fontSize: 32,
-    marginLeft: 16,
-  },
-  resourcesSection: {
-    paddingHorizontal: 20,
-    marginBottom: 24,
-  },
-  resourcesTitle: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 18,
-    color: colors.text,
-    marginBottom: 16,
-  },
-  resourcesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  resourceCard: {
-    flex: 1,
-    minWidth: '30%',
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 80,
-  },
-  resourceTitle: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 12,
-    color: colors.text,
-    textAlign: 'center',
-  },
-  card: {
-    backgroundColor: colors.surface,
-    marginHorizontal: 20,
-    marginBottom: 16,
-    borderRadius: 12,
-    padding: 20,
-    shadowColor: colors.shadow,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 1,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  cardTitle: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 18,
-    color: colors.text,
-  },
-  achievementSummary: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginBottom: 16,
-    lineHeight: 20,
-  },
-  achievementProgressBar: {
-    height: 8,
-    backgroundColor: colors.borderLight,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  achievementProgress: {
-    height: '100%',
-    backgroundColor: colors.warning,
-    borderRadius: 4,
-  },
-  sectionTitle: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 18,
-    color: colors.text,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    marginTop: 8,
-  },
-  achievementCard: {
-    backgroundColor: colors.surface,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: colors.shadow,
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 1,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  achievementIcon: {
-    width: 48,
-    height: 48,
-    backgroundColor: colors.surfaceSecondary,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  achievementEmoji: {
-    fontSize: 24,
-  },
-  achievementInfo: {
-    flex: 1,
-  },
-  achievementName: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 16,
-    color: colors.text,
-  },
-  achievementProgress: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  completedBadge: {
-    width: 24,
-    height: 24,
-    backgroundColor: colors.success,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  completedText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontFamily: 'Inter-Bold',
-  },
-});
+    backgroundColor: colors
