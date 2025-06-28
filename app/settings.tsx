@@ -7,18 +7,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { 
-  ArrowLeft, 
-  User, 
-  Lock, 
-  Bell, 
-  Smartphone, 
-  HelpCircle, 
-  Play, 
-  Info,
-  LogOut,
-  ChevronRight
-} from 'lucide-react-native';
+import { ArrowLeft, User, Lock, Bell, Smartphone, CircleHelp as HelpCircle, Play, Info, LogOut, ChevronRight } from 'lucide-react-native';
 import { useColorScheme, getColors } from '@/hooks/useColorScheme';
 import { router } from 'expo-router';
 import { useUserRole } from '@/contexts/UserContext';
