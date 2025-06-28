@@ -103,6 +103,10 @@ export default function TodayClientView() {
     router.push('/set-macros-goal');
   };
 
+  const handleAddMeal = () => {
+    router.push('/food-journal');
+  };
+
   const renderTodaysWorkout = () => {
     if (!todaysWorkout) {
       return (
@@ -257,7 +261,7 @@ export default function TodayClientView() {
             What did you eat today?
           </Text>
           
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity style={styles.actionButton} onPress={handleAddMeal}>
             <Text style={styles.actionButtonText}>Add meal</Text>
           </TouchableOpacity>
         </View>
