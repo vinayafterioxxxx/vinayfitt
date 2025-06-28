@@ -7,15 +7,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { 
-  ArrowLeft, 
-  Play, 
-  Clock, 
-  Dumbbell,
-  Calendar,
-  CheckCircle,
-  AlertCircle
-} from 'lucide-react-native';
+import { ArrowLeft, Play, Clock, Dumbbell, Calendar, CircleCheck as CheckCircle, CircleAlert as AlertCircle } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useColorScheme, getColors } from '../../hooks/useColorScheme';
 import { router, useLocalSearchParams } from 'expo-router';
