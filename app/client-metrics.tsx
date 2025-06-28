@@ -39,7 +39,7 @@ export default function ClientMetricsScreen() {
   };
 
   const handleMetricPress = (metricType: MetricType) => {
-    router.push(`/metric-detail/${metricType}`);
+    router.push(`/metric-tracking/${metricType}`);
   };
 
   const handleLogAllMetrics = () => {
