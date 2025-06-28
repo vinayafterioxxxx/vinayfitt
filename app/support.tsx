@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Send, HelpCircle, MessageSquare, Mail } from 'lucide-react-native';
+import { ArrowLeft, Send, CircleHelp as HelpCircle, MessageSquare, Mail } from 'lucide-react-native';
 import { useColorScheme, getColors } from '@/hooks/useColorScheme';
 import { router } from 'expo-router';
 
