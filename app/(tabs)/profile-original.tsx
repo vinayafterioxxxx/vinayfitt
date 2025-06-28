@@ -176,7 +176,7 @@ export default function ProfileView() {
         <View style={styles.metricsSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Metrics</Text>
-            <TouchableOpacity>
+            <TouchableOpacity  onPress={() => router.push('/metric-details')}>
               <Text style={styles.viewMoreText}>View more</Text>
             </TouchableOpacity>
           </View>
