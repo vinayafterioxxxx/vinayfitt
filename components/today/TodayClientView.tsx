@@ -99,6 +99,10 @@ export default function TodayClientView() {
     }
   };
 
+  const handleSetMacrosGoal = () => {
+    router.push('/set-macros-goal');
+  };
+
   const renderTodaysWorkout = () => {
     if (!todaysWorkout) {
       return (
@@ -237,7 +241,7 @@ export default function TodayClientView() {
             Start by setting your daily goal
           </Text>
           
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity style={styles.actionButton} onPress={handleSetMacrosGoal}>
             <Text style={styles.actionButtonText}>Set daily goal</Text>
           </TouchableOpacity>
         </View>
