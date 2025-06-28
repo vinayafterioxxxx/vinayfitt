@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,45 +15,26 @@ import {
   Trophy,
   Play,
   Calendar,
-  TrendingUp
+  TrendingUp,
+  ChevronRight
 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme, getColors } from '../../hooks/useColorScheme';
+import { router } from 'expo-router';
+import { WorkoutPlan, WorkoutTemplate } from '@/types/workout';
+import { getClientPlans, getTemplate } from '@/utils/storage';
+import { getDayOfWeek, getWeekDates } from '@/utils/workoutUtils';
 
 const { width } = Dimensions.get('window');
 
-const workouts = [
-  {
-    id: 1,
-    name: 'Full Body Strength',
-    duration: '45 min',
-    calories: '380 cal',
-    difficulty: 'Intermediate',
-    completed: false,
-    color: ['#667EEA', '#764BA2'],
-    colorDark: ['#1E40AF', '#3730A3'],
-  },
-  {
-    id: 2,
-    name: 'HIIT Cardio Blast',
-    duration: '30 min',
-    calories: '420 cal',
-    difficulty: 'Advanced',
-    completed: false,
-    color: ['#F093FB', '#F5576C'],
-    colorDark: ['#BE185D', '#BE123C'],
-  },
-  {
-    id: 3,
-    name: 'Yoga Flow',
-    duration: '60 min',
-    calories: '200 cal',
-    difficulty: 'Beginner',
-    completed: true,
-    color: ['#4FACFE', '#00F2FE'],
-    colorDark: ['#0284C7', '#0891B2'],
-  },
-];
+interface WeeklyWorkout {
+  date: string;
+  dayName: string;
+  dayNumber: number;
+  template: WorkoutTemplate | null;
+  completed: boolean;
+  missed: boolean;
+}
 
 const achievements = [
   { name: '7-Day Streak', icon: '🔥', completed: false, progress: 3 },
@@ -67,6 +48,177 @@ export default function CoachingClientView() {
   const styles = createStyles(colors);
 
   const [selectedTab, setSelectedTab] = useState('workouts');
+  const [weeklyWorkouts, setWeeklyWorkouts] = useState<WeeklyWorkout[]>([]);
+  const [currentPlan, setCurrentPlan] = useState<WorkoutPlan | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadWeeklySchedule();
+  }, []);
+
+  const loadWeeklySchedule = async () => {
+    try {
+      const clientId = 'client-1'; // TODO: Get from user context
+      const plans = await getClientPlans(clientId);
+      
+      // Find active plan for this week
+      const today = new Date();
+      const todayString = today.toISOString().split('T')[0];
+      const activePlan = plans.find(plan => 
+        plan.startDate <= todayString && plan.endDate >= todayString
+      );
+
+      if (activePlan) {
+        setCurrentPlan(activePlan);
+        
+        // Generate this week's schedule
+        const weekDates = getWeekDates(today);
+        const weeklySchedule: WeeklyWorkout[] = [];
+        
+        const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        const shortDayNames = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+        
+        for (let i = 0; i < 7; i++) {
+          const dayName = dayNames[i];
+          const date = weekDates[dayName];
+          const dayNumber = new Date(date).getDate();
+          const templateId = activePlan.schedule[dayName];
+          
+          let template = null;
+          if (templateId) {
+            template = await getTemplate(templateId);
+          }
+          
+          // Check if workout was completed or missed
+          const isToday = date === todayString;
+          const isPast = new Date(date) < new Date(todayString);
+          const completed = false; // TODO: Check from workout sessions
+          const missed = isPast && templateId && !completed;
+          
+          weeklySchedule.push({
+            date,
+            dayName: shortDayNames[i],
+            dayNumber,
+            template,
+            completed,
+            missed
+          });
+        }
+        
+        setWeeklyWorkouts(weeklySchedule);
+      }
+    } catch (error) {
+      console.error('Error loading weekly schedule:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDayPress = (workout: WeeklyWorkout) => {
+    if (workout.template) {
+      router.push(`/training-day/${workout.date}?templateId=${workout.template.id}`);
+    }
+  };
+
+  const getWorkoutCount = () => {
+    return weeklyWorkouts.filter(w => w.template !== null).length;
+  };
+
+  const renderWeeklyCalendar = () => (
+    <View style={styles.calendarSection}>
+      <View style={styles.calendarHeader}>
+        <Text style={styles.calendarTitle}>Training (this week)</Text>
+      </View>
+      
+      <View style={styles.weekContainer}>
+        {weeklyWorkouts.map((workout, index) => (
+          <TouchableOpacity
+            key={index}
+            style={[
+              styles.dayButton,
+              workout.template && styles.activeDayButton,
+              workout.completed && styles.completedDayButton,
+              workout.missed && styles.missedDayButton
+            ]}
+            onPress={() => handleDayPress(workout)}
+            disabled={!workout.template}
+          >
+            <Text style={[
+              styles.dayName,
+              workout.template && styles.activeDayName,
+              workout.completed && styles.completedDayName,
+              workout.missed && styles.missedDayName
+            ]}>
+              {workout.dayName}
+            </Text>
+            <Text style={[
+              styles.dayNumber,
+              workout.template && styles.activeDayNumber,
+              workout.completed && styles.completedDayNumber,
+              workout.missed && styles.missedDayNumber
+            ]}>
+              {workout.dayNumber.toString().padStart(2, '0')}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      
+      <Text style={styles.weekSummary}>
+        You have {getWorkoutCount()} workouts this week!
+      </Text>
+    </View>
+  );
+
+  const renderTaskSection = () => (
+    <View style={styles.taskSection}>
+      <Text style={styles.taskTitle}>Task (last 7 days)</Text>
+      <Text style={styles.taskMessage}>There are no tasks</Text>
+    </View>
+  );
+
+  const renderMacrosSection = () => (
+    <View style={styles.macrosSection}>
+      <Text style={styles.macrosTitle}>Macros</Text>
+      <View style={styles.macrosContent}>
+        <View style={styles.macrosText}>
+          <Text style={styles.macrosDescription}>
+            Start by setting your daily goal
+          </Text>
+          <TouchableOpacity style={styles.macrosButton}>
+            <Text style={styles.macrosButtonText}>Set daily goal</Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.macrosEmoji}>🥗🍎🥕</Text>
+      </View>
+    </View>
+  );
+
+  const renderResourcesSection = () => (
+    <View style={styles.resourcesSection}>
+      <Text style={styles.resourcesTitle}>Resources</Text>
+      <View style={styles.resourcesGrid}>
+        <TouchableOpacity style={styles.resourceCard}>
+          <Text style={styles.resourceTitle}>Welcome Kit</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.resourceCard}>
+          <Text style={styles.resourceTitle}>Nutrition Resources</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.resourceCard}>
+          <Text style={styles.resourceTitle}>Other Resources</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading your training schedule...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -95,67 +247,17 @@ export default function CoachingClientView() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {selectedTab === 'workouts' ? (
           <>
-            {/* Weekly Progress */}
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.cardTitle}>This Week</Text>
-                <TrendingUp size={24} color={colors.primary} />
-              </View>
-              
-              <View style={styles.progressGrid}>
-                <View style={styles.progressItem}>
-                  <Text style={styles.progressNumber}>3</Text>
-                  <Text style={styles.progressLabel}>Workouts</Text>
-                </View>
-                <View style={styles.progressItem}>
-                  <Text style={styles.progressNumber}>184</Text>
-                  <Text style={styles.progressLabel}>Minutes</Text>
-                </View>
-                <View style={styles.progressItem}>
-                  <Text style={styles.progressNumber}>1,240</Text>
-                  <Text style={styles.progressLabel}>Calories</Text>
-                </View>
-              </View>
-            </View>
+            {/* Weekly Training Calendar */}
+            {renderWeeklyCalendar()}
 
-            {/* Recommended Workouts */}
-            <Text style={styles.sectionTitle}>Recommended for You</Text>
-            
-            {workouts.map((workout) => (
-              <TouchableOpacity key={workout.id} style={styles.workoutCard}>
-                <LinearGradient
-                  colors={colorScheme === 'dark' ? workout.colorDark : workout.color}
-                  style={styles.workoutGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <View style={styles.workoutContent}>
-                    <View style={styles.workoutInfo}>
-                      <Text style={styles.workoutName}>{workout.name}</Text>
-                      <View style={styles.workoutMeta}>
-                        <View style={styles.metaItem}>
-                          <Clock size={14} color="rgba(255, 255, 255, 0.8)" />
-                          <Text style={styles.metaText}>{workout.duration}</Text>
-                        </View>
-                        <View style={styles.metaItem}>
-                          <Flame size={14} color="rgba(255, 255, 255, 0.8)" />
-                          <Text style={styles.metaText}>{workout.calories}</Text>
-                        </View>
-                      </View>
-                      <Text style={styles.difficultyText}>{workout.difficulty}</Text>
-                    </View>
-                    
-                    <View style={styles.playButton}>
-                      {workout.completed ? (
-                        <Trophy size={24} color="#FFFFFF" />
-                      ) : (
-                        <Play size={24} color="#FFFFFF" />
-                      )}
-                    </View>
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
-            ))}
+            {/* Task Section */}
+            {renderTaskSection()}
+
+            {/* Macros Section */}
+            {renderMacrosSection()}
+
+            {/* Resources Section */}
+            {renderResourcesSection()}
           </>
         ) : (
           <>
@@ -215,6 +317,16 @@ const createStyles = (colors: any) => StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 16,
+    color: colors.textSecondary,
+  },
   header: {
     paddingHorizontal: 20,
     paddingTop: 10,
@@ -252,6 +364,170 @@ const createStyles = (colors: any) => StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  calendarSection: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  calendarHeader: {
+    marginBottom: 16,
+  },
+  calendarTitle: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 18,
+    color: colors.text,
+  },
+  weekContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  dayButton: {
+    width: 40,
+    height: 60,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  activeDayButton: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  completedDayButton: {
+    backgroundColor: colors.success,
+    borderColor: colors.success,
+  },
+  missedDayButton: {
+    backgroundColor: colors.error,
+    borderColor: colors.error,
+  },
+  dayName: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: 4,
+  },
+  activeDayName: {
+    color: '#FFFFFF',
+  },
+  completedDayName: {
+    color: '#FFFFFF',
+  },
+  missedDayName: {
+    color: '#FFFFFF',
+  },
+  dayNumber: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 16,
+    color: colors.text,
+  },
+  activeDayNumber: {
+    color: '#FFFFFF',
+  },
+  completedDayNumber: {
+    color: '#FFFFFF',
+  },
+  missedDayNumber: {
+    color: '#FFFFFF',
+  },
+  weekSummary: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  taskSection: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  taskTitle: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 18,
+    color: colors.text,
+    marginBottom: 12,
+  },
+  taskMessage: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  macrosSection: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  macrosTitle: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 18,
+    color: colors.text,
+    marginBottom: 16,
+  },
+  macrosContent: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  macrosText: {
+    flex: 1,
+  },
+  macrosDescription: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  macrosButton: {
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignSelf: 'flex-start',
+  },
+  macrosButtonText: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 12,
+    color: colors.primary,
+  },
+  macrosEmoji: {
+    fontSize: 32,
+    marginLeft: 16,
+  },
+  resourcesSection: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  resourcesTitle: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 18,
+    color: colors.text,
+    marginBottom: 16,
+  },
+  resourcesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  resourceCard: {
+    flex: 1,
+    minWidth: '30%',
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 80,
+  },
+  resourceTitle: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 12,
+    color: colors.text,
+    textAlign: 'center',
+  },
   card: {
     backgroundColor: colors.surface,
     marginHorizontal: 20,
@@ -278,86 +554,6 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontSize: 18,
     color: colors.text,
   },
-  progressGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  progressItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  progressNumber: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 24,
-    color: colors.text,
-  },
-  progressLabel: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 4,
-  },
-  sectionTitle: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 18,
-    color: colors.text,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    marginTop: 8,
-  },
-  workoutCard: {
-    marginHorizontal: 20,
-    marginBottom: 16,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  workoutGradient: {
-    padding: 20,
-  },
-  workoutContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  workoutInfo: {
-    flex: 1,
-  },
-  workoutName: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 18,
-    color: '#FFFFFF',
-    marginBottom: 8,
-  },
-  workoutMeta: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  metaText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginLeft: 4,
-  },
-  difficultyText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  playButton: {
-    width: 48,
-    height: 48,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   achievementSummary: {
     fontFamily: 'Inter-Regular',
     fontSize: 14,
@@ -375,6 +571,14 @@ const createStyles = (colors: any) => StyleSheet.create({
     height: '100%',
     backgroundColor: colors.warning,
     borderRadius: 4,
+  },
+  sectionTitle: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 18,
+    color: colors.text,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    marginTop: 8,
   },
   achievementCard: {
     backgroundColor: colors.surface,
