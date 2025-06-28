@@ -102,7 +102,7 @@ export default function MetricTrackingScreen() {
     const range = maxValue - minValue || 1;
 
     const chartWidth = width - 80;
-    const chartHeight = 200;
+    const chartHeight = 160;
 
     const points: ChartPoint[] = sortedEntries.map((entry, index) => {
       const x = (index / Math.max(sortedEntries.length - 1, 1)) * chartWidth;
@@ -178,11 +178,18 @@ export default function MetricTrackingScreen() {
     }
 
     const chartWidth = width - 80;
-    const chartHeight = 200;
+    const chartHeight = 160;
 
     return (
       <View style={styles.chartContainer}>
         <View style={[styles.chartArea, { width: chartWidth, height: chartHeight }]}>
+          {/* Y-axis labels */}
+          <View style={styles.yAxisLabels}>
+            <Text style={styles.yAxisLabel}>100</Text>
+            <Text style={styles.yAxisLabel}>80</Text>
+            <Text style={styles.yAxisLabel}>60</Text>
+          </View>
+          
           {/* Chart line */}
           <View style={styles.chartLine}>
             {chartData.map((point, index) => {
@@ -547,6 +554,19 @@ const createStyles = (colors: any) => StyleSheet.create({
     position: 'relative',
     marginBottom: 20,
   },
+  yAxisLabels: {
+    position: 'absolute',
+    left: -30,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+  },
+  yAxisLabel: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 12,
+    color: colors.textTertiary,
+  },
   chartLine: {
     position: 'absolute',
     top: 0,
@@ -600,7 +620,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     textAlign: 'center',
   },
   emptyChart: {
-    height: 200,
+    height: 160,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.surface,
