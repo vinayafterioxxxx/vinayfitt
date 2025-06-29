@@ -2,12 +2,24 @@ import { Tabs } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import { Chrome as Home, Dumbbell, MessageSquare, Play, User, Users, Apple, Shield, Briefcase } from 'lucide-react-native';
 import { useColorScheme, getColors } from '@/hooks/useColorScheme';
-import { useUserRole } from '@/contexts/UserContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useEffect } from 'react';
+import { router } from 'expo-router';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const colors = getColors(colorScheme);
-  const { userRole } = useUserRole();
+  const { profile, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && !profile) {
+      router.replace('/(auth)/login');
+    }
+  }, [profile, loading]);
+
+  if (loading || !profile) {
+    return null;
+  }
 
   // Define role-specific tab configurations
   const getTabsForRole = () => {
@@ -137,7 +149,7 @@ export default function TabLayout() {
       ],
     };
 
-    return roleTabs[userRole || 'client'] || roleTabs.client;
+    return roleTabs[profile.role] || roleTabs.client;
   };
 
   const tabs = getTabsForRole();

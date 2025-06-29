@@ -10,8 +10,7 @@ import {
   Inter_700Bold
 } from '@expo-google-fonts/inter';
 import { SplashScreen } from 'expo-router';
-import { UserProvider } from '@/contexts/UserContext';
-import { initializeDefaultData } from '@/utils/storage';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -28,8 +27,6 @@ export default function RootLayout() {
   useEffect(() => {
     if (fontsLoaded || fontError) {
       SplashScreen.hideAsync();
-      // Initialize default data when app starts
-      initializeDefaultData();
     }
   }, [fontsLoaded, fontError]);
 
@@ -38,7 +35,7 @@ export default function RootLayout() {
   }
 
   return (
-    <UserProvider>
+    <AuthProvider>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
@@ -49,6 +46,6 @@ export default function RootLayout() {
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="dark" />
-    </UserProvider>
+    </AuthProvider>
   );
 }
