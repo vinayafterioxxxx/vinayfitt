@@ -42,7 +42,7 @@ export default function MetricTrackingScreen() {
   const timeRanges: TimeRange[] = ['1W', '1M', '2M', '1Y'];
   const periodOptions = ['By Week', 'By Month', 'By Year'];
 
-  useEffect(() => {
+  useEffect(() => { 
     loadMetric();
   }, [metricType]);
 
