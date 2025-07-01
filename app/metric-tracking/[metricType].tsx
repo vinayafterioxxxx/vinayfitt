@@ -24,6 +24,15 @@ interface ChartPoint {
   date: string;
 }
 
+interface GroupedEntry {
+  period: string;
+  entries: MetricEntry[];
+  averageValue: number;
+  latestValue: number;
+  startDate: string;
+  endDate: string;
+}
+
 export default function MetricTrackingScreen() {
   const colorScheme = useColorScheme();
   const colors = getColors(colorScheme);
@@ -34,24 +43,25 @@ export default function MetricTrackingScreen() {
   const [selectedRange, setSelectedRange] = useState<TimeRange>('1M');
   const [selectedPeriod, setSelectedPeriod] = useState('By Week');
   const [showPeriodPicker, setShowPeriodPicker] = useState(false);
-  const [currentDateRange, setCurrentDateRange] = useState('');
+  const [currentRangeIndex, setCurrentRangeIndex] = useState(0);
   const [chartData, setChartData] = useState<ChartPoint[]>([]);
+  const [filteredEntries, setFilteredEntries] = useState<MetricEntry[]>([]);
   const [hoveredPoint, setHoveredPoint] = useState<ChartPoint | null>(null);
   const [loading, setLoading] = useState(true);
+  const [expandedPeriod, setExpandedPeriod] = useState<string | null>(null);
 
   const timeRanges: TimeRange[] = ['1W', '1M', '2M', '1Y'];
   const periodOptions = ['By Week', 'By Month', 'By Year'];
 
-  useEffect(() => { 
+  useEffect(() => {
     loadMetric();
   }, [metricType]);
 
   useEffect(() => {
     if (metric) {
-      updateChartData();
-      updateDateRange();
+      updateFilteredData();
     }
-  }, [metric, selectedRange]);
+  }, [metric, selectedRange, currentRangeIndex]);
 
   const loadMetric = async () => {
     try {
@@ -64,48 +74,71 @@ export default function MetricTrackingScreen() {
     }
   };
 
-  const getFilteredEntries = (): MetricEntry[] => {
-    if (!metric) return [];
-    
+  const getDateRangeForIndex = (range: TimeRange, index: number): { start: Date; end: Date } => {
     const now = new Date();
-    const cutoffDate = new Date();
-    
-    switch (selectedRange) {
+    const end = new Date(now);
+    const start = new Date(now);
+
+    // Calculate the range duration
+    let rangeDays = 0;
+    switch (range) {
       case '1W':
-        cutoffDate.setDate(now.getDate() - 7);
+        rangeDays = 7;
         break;
       case '1M':
-        cutoffDate.setMonth(now.getMonth() - 1);
+        rangeDays = 30;
         break;
       case '2M':
-        cutoffDate.setMonth(now.getMonth() - 2);
+        rangeDays = 60;
         break;
       case '1Y':
-        cutoffDate.setFullYear(now.getFullYear() - 1);
+        rangeDays = 365;
         break;
     }
-    
-    return metric.entries.filter(entry => new Date(entry.date) >= cutoffDate);
+
+    // Move the range back by index periods
+    const totalDaysBack = rangeDays * (index + 1);
+    end.setDate(now.getDate() - (rangeDays * index));
+    start.setDate(now.getDate() - totalDaysBack);
+
+    return { start, end };
   };
 
-  const updateChartData = () => {
-    const entries = getFilteredEntries();
+  const updateFilteredData = () => {
+    if (!metric || !metric.entries) return;
+
+    const { start, end } = getDateRangeForIndex(selectedRange, currentRangeIndex);
+    
+    const filtered = metric.entries.filter(entry => {
+      const entryDate = new Date(entry.date);
+      return entryDate >= start && entryDate <= end;
+    });
+
+    // Sort by date (oldest first for chart)
+    const sortedEntries = [...filtered].sort((a, b) => 
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    setFilteredEntries(sortedEntries);
+    updateChartData(sortedEntries);
+  };
+
+  const updateChartData = (entries: MetricEntry[]) => {
     if (entries.length === 0) {
       setChartData([]);
       return;
     }
 
-    const sortedEntries = [...entries].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    const values = sortedEntries.map(e => e.value);
+    const values = entries.map(e => e.value);
     const maxValue = Math.max(...values);
     const minValue = Math.min(...values);
     const range = maxValue - minValue || 1;
 
-    const chartWidth = width - 80;
+    const chartWidth = width - 120;
     const chartHeight = 200;
 
-    const points: ChartPoint[] = sortedEntries.map((entry, index) => {
-      const x = (index / Math.max(sortedEntries.length - 1, 1)) * chartWidth;
+    const points: ChartPoint[] = entries.map((entry, index) => {
+      const x = (index / Math.max(entries.length - 1, 1)) * chartWidth;
       const y = chartHeight - ((entry.value - minValue) / range) * (chartHeight - 40) - 20;
       
       return {
@@ -119,42 +152,62 @@ export default function MetricTrackingScreen() {
     setChartData(points);
   };
 
-  const updateDateRange = () => {
-    const entries = getFilteredEntries();
-    if (entries.length === 0) {
-      setCurrentDateRange('');
-      return;
-    }
+  const getCurrentDateRange = (): string => {
+    if (filteredEntries.length === 0) return '';
 
-    const dates = entries.map(e => new Date(e.date)).sort((a, b) => a.getTime() - b.getTime());
+    const dates = filteredEntries.map(e => new Date(e.date)).sort((a, b) => a.getTime() - b.getTime());
     const start = dates[0];
     const end = dates[dates.length - 1];
     
-    const formatDate = (date: Date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const formatDate = (date: Date) => date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: start.getFullYear() !== end.getFullYear() ? 'numeric' : undefined
+    });
     
-    setCurrentDateRange(`${formatDate(start)} - ${formatDate(end)}`);
+    return `${formatDate(start)} - ${formatDate(end)}`;
   };
 
-  const groupEntriesByPeriod = () => {
-    const entries = getFilteredEntries();
+  const navigateRange = (direction: 'prev' | 'next') => {
+    if (direction === 'prev') {
+      setCurrentRangeIndex(prev => prev + 1);
+    } else if (direction === 'next' && currentRangeIndex > 0) {
+      setCurrentRangeIndex(prev => prev - 1);
+    }
+  };
+
+  const groupEntriesByPeriod = (): GroupedEntry[] => {
+    if (!filteredEntries.length) return [];
+
     const grouped: { [key: string]: MetricEntry[] } = {};
     
-    entries.forEach(entry => {
+    filteredEntries.forEach(entry => {
       const date = new Date(entry.date);
       let periodKey = '';
+      let startDate = '';
+      let endDate = '';
       
       switch (selectedPeriod) {
         case 'By Week':
           const weekStart = new Date(date);
-          weekStart.setDate(date.getDate() - date.getDay() + 1);
+          weekStart.setDate(date.getDate() - date.getDay() + 1); // Monday
           const weekEnd = new Date(weekStart);
-          weekEnd.setDate(weekStart.getDate() + 6);
+          weekEnd.setDate(weekStart.getDate() + 6); // Sunday
+          
+          startDate = weekStart.toISOString().split('T')[0];
+          endDate = weekEnd.toISOString().split('T')[0];
           periodKey = `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
           break;
+          
         case 'By Month':
+          startDate = new Date(date.getFullYear(), date.getMonth(), 1).toISOString().split('T')[0];
+          endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0).toISOString().split('T')[0];
           periodKey = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
           break;
+          
         case 'By Year':
+          startDate = new Date(date.getFullYear(), 0, 1).toISOString().split('T')[0];
+          endDate = new Date(date.getFullYear(), 11, 31).toISOString().split('T')[0];
           periodKey = date.getFullYear().toString();
           break;
       }
@@ -165,29 +218,63 @@ export default function MetricTrackingScreen() {
       grouped[periodKey].push(entry);
     });
     
-    return grouped;
+    // Convert to GroupedEntry array and sort by date (newest first)
+    return Object.entries(grouped)
+      .map(([period, entries]) => {
+        const sortedEntries = entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        const values = entries.map(e => e.value);
+        const averageValue = values.reduce((sum, val) => sum + val, 0) / values.length;
+        const latestValue = sortedEntries[0].value;
+        
+        // Get date range for this period
+        const dates = entries.map(e => new Date(e.date)).sort((a, b) => a.getTime() - b.getTime());
+        const startDate = dates[0].toISOString().split('T')[0];
+        const endDate = dates[dates.length - 1].toISOString().split('T')[0];
+        
+        return {
+          period,
+          entries: sortedEntries,
+          averageValue,
+          latestValue,
+          startDate,
+          endDate
+        };
+      })
+      .sort((a, b) => new Date(b.endDate).getTime() - new Date(a.startDate).getTime());
   };
 
   const renderChart = () => {
     if (chartData.length === 0) {
       return (
         <View style={styles.emptyChart}>
-          <Text style={styles.emptyChartText}>No data available</Text>
+          <Text style={styles.emptyChartText}>No data available for this period</Text>
         </View>
       );
     }
 
-    const chartWidth = width - 80;
+    const chartWidth = width - 120;
     const chartHeight = 200;
+
+    // Calculate Y-axis labels based on data
+    const values = chartData.map(p => p.value);
+    const maxValue = Math.max(...values);
+    const minValue = Math.min(...values);
+    const range = maxValue - minValue || 1;
+    
+    const yLabels = [
+      Math.round(maxValue),
+      Math.round(maxValue - range * 0.5),
+      Math.round(minValue)
+    ];
 
     return (
       <View style={styles.chartContainer}>
         <View style={[styles.chartArea, { width: chartWidth, height: chartHeight }]}>
           {/* Y-axis labels */}
           <View style={styles.yAxisLabels}>
-            <Text style={styles.yAxisLabel}>100</Text>
-            <Text style={styles.yAxisLabel}>80</Text>
-            <Text style={styles.yAxisLabel}>60</Text>
+            {yLabels.map((label, index) => (
+              <Text key={index} style={styles.yAxisLabel}>{label}</Text>
+            ))}
           </View>
           
           {/* Chart line */}
@@ -257,12 +344,14 @@ export default function MetricTrackingScreen() {
         {/* X-axis labels */}
         <View style={styles.chartLabels}>
           {chartData.map((point, index) => {
-            if (index % Math.ceil(chartData.length / 5) !== 0) return null;
-            return (
-              <Text key={index} style={[styles.chartLabel, { left: point.x - 15 }]}>
-                {new Date(point.date).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}
-              </Text>
-            );
+            if (chartData.length <= 5 || index % Math.ceil(chartData.length / 5) === 0) {
+              return (
+                <Text key={index} style={[styles.chartLabel, { left: point.x - 15 }]}>
+                  {new Date(point.date).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}
+                </Text>
+              );
+            }
+            return null;
           })}
         </View>
       </View>
@@ -271,11 +360,6 @@ export default function MetricTrackingScreen() {
 
   const renderHistoryList = () => {
     const groupedEntries = groupEntriesByPeriod();
-    const sortedPeriods = Object.keys(groupedEntries).sort((a, b) => {
-      const aDate = new Date(groupedEntries[a][0].date);
-      const bDate = new Date(groupedEntries[b][0].date);
-      return bDate.getTime() - aDate.getTime();
-    });
 
     return (
       <View style={styles.historySection}>
@@ -295,22 +379,73 @@ export default function MetricTrackingScreen() {
           </TouchableOpacity>
         </View>
 
-        {sortedPeriods.map((period) => {
-          const periodEntries = groupedEntries[period];
-          const latestEntry = periodEntries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-          
-          return (
-            <TouchableOpacity key={period} style={styles.historyItem}>
-              <Text style={styles.historyPeriod}>{period}</Text>
-              <View style={styles.historyValue}>
-                <Text style={styles.historyValueText}>
-                  {latestEntry.value} {metric?.unit}
-                </Text>
-                <ChevronDown size={16} color={colors.textTertiary} />
-              </View>
-            </TouchableOpacity>
-          );
-        })}
+        {groupedEntries.length === 0 ? (
+          <View style={styles.emptyHistory}>
+            <Text style={styles.emptyHistoryText}>No data available for this period</Text>
+          </View>
+        ) : (
+          groupedEntries.map((group) => (
+            <View key={group.period}>
+              <TouchableOpacity 
+                style={styles.historyItem}
+                onPress={() => setExpandedPeriod(expandedPeriod === group.period ? null : group.period)}
+              >
+                <View style={styles.historyItemContent}>
+                  <Text style={styles.historyPeriod}>{group.period}</Text>
+                  <Text style={styles.historySubtext}>
+                    {group.entries.length} {group.entries.length === 1 ? 'entry' : 'entries'}
+                  </Text>
+                </View>
+                <View style={styles.historyValue}>
+                  <Text style={styles.historyValueText}>
+                    {group.latestValue} {metric?.unit}
+                  </Text>
+                  <ChevronDown 
+                    size={16} 
+                    color={colors.textTertiary}
+                    style={[
+                      styles.expandIcon,
+                      expandedPeriod === group.period && styles.expandIconRotated
+                    ]}
+                  />
+                </View>
+              </TouchableOpacity>
+              
+              {expandedPeriod === group.period && (
+                <View style={styles.expandedContent}>
+                  {group.entries.map((entry, index) => (
+                    <View key={entry.id} style={styles.entryItem}>
+                      <View style={styles.entryInfo}>
+                        <Text style={styles.entryDate}>
+                          {new Date(entry.date).toLocaleDateString('en-US', {
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </Text>
+                        <Text style={styles.entryTime}>{entry.time}</Text>
+                      </View>
+                      <Text style={styles.entryValue}>
+                        {entry.value} {entry.unit}
+                      </Text>
+                    </View>
+                  ))}
+                  
+                  {group.entries.length > 1 && (
+                    <View style={styles.periodSummary}>
+                      <Text style={styles.summaryText}>
+                        Average: {group.averageValue.toFixed(1)} {metric?.unit}
+                      </Text>
+                      <Text style={styles.summaryText}>
+                        Range: {Math.min(...group.entries.map(e => e.value)).toFixed(1)} - {Math.max(...group.entries.map(e => e.value)).toFixed(1)} {metric?.unit}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+          ))
+        )}
       </View>
     );
   };
@@ -335,6 +470,10 @@ export default function MetricTrackingScreen() {
     );
   }
 
+  const currentValue = filteredEntries.length > 0 
+    ? filteredEntries[0].value 
+    : metric.currentValue || 0;
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -356,7 +495,10 @@ export default function MetricTrackingScreen() {
                 styles.rangeButton,
                 selectedRange === range && styles.activeRangeButton
               ]}
-              onPress={() => setSelectedRange(range)}
+              onPress={() => {
+                setSelectedRange(range);
+                setCurrentRangeIndex(0); // Reset to current period
+              }}
             >
               <Text style={[
                 styles.rangeButtonText,
@@ -372,15 +514,25 @@ export default function MetricTrackingScreen() {
         <View style={styles.currentSection}>
           <Text style={styles.currentLabel}>CURRENT</Text>
           <Text style={styles.currentValue}>
-            {metric.currentValue || 0} {metric.unit}
+            {currentValue} {metric.unit}
           </Text>
           <View style={styles.dateNavigation}>
-            <TouchableOpacity style={styles.navButton}>
+            <TouchableOpacity 
+              style={styles.navButton}
+              onPress={() => navigateRange('prev')}
+            >
               <ChevronLeft size={20} color={colors.textSecondary} />
             </TouchableOpacity>
-            <Text style={styles.dateRange}>{currentDateRange}</Text>
-            <TouchableOpacity style={styles.navButton}>
-              <ChevronRight size={20} color={colors.textSecondary} />
+            <Text style={styles.dateRange}>{getCurrentDateRange()}</Text>
+            <TouchableOpacity 
+              style={[
+                styles.navButton,
+                currentRangeIndex === 0 && styles.navButtonDisabled
+              ]}
+              onPress={() => navigateRange('next')}
+              disabled={currentRangeIndex === 0}
+            >
+              <ChevronRight size={20} color={currentRangeIndex === 0 ? colors.borderLight : colors.textSecondary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -423,6 +575,7 @@ export default function MetricTrackingScreen() {
                 ]}
                 onPress={() => {
                   setSelectedPeriod(period);
+                  setExpandedPeriod(null); // Reset expanded state
                   setShowPeriodPicker(false);
                 }}
               >
@@ -537,6 +690,9 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   navButton: {
     padding: 4,
+  },
+  navButtonDisabled: {
+    opacity: 0.3,
   },
   dateRange: {
     fontFamily: 'Inter-Regular',
@@ -668,9 +824,6 @@ const createStyles = (colors: any) => StyleSheet.create({
     marginRight: 4,
   },
   historyItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
@@ -681,10 +834,21 @@ const createStyles = (colors: any) => StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
+  historyItemContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   historyPeriod: {
     fontFamily: 'Inter-Regular',
     fontSize: 16,
     color: colors.text,
+  },
+  historySubtext: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 12,
+    color: colors.textTertiary,
+    marginTop: 2,
   },
   historyValue: {
     flexDirection: 'row',
@@ -695,6 +859,68 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontSize: 16,
     color: colors.text,
     marginRight: 8,
+  },
+  expandIcon: {
+    transform: [{ rotate: '0deg' }],
+  },
+  expandIconRotated: {
+    transform: [{ rotate: '180deg' }],
+  },
+  expandedContent: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  entryItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: 8,
+    marginBottom: 6,
+  },
+  entryInfo: {
+    flex: 1,
+  },
+  entryDate: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 14,
+    color: colors.text,
+  },
+  entryTime: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  entryValue: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 14,
+    color: colors.primary,
+  },
+  periodSummary: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: 8,
+  },
+  summaryText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: 4,
+  },
+  emptyHistory: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyHistoryText: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 14,
+    color: colors.textTertiary,
   },
   fab: {
     position: 'absolute',
