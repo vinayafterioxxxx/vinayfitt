@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LogOut, Settings, User, BarChart3, TrendingUp, Plus } from 'lucide-react-native';
+import { LogOut, Settings, User, ChartBar as BarChart3, TrendingUp, Plus } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useColorScheme, getColors } from '@/hooks/useColorScheme';
 import { router } from 'expo-router';
